@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Vrlo jednostavna HTML5 igra</title>
+        <style>
+            canvas {
+                border:1px solid #000000;
+                background-color: #f1f1f1;
+            }
+        </style>
+        <script>
+            var myGamePieces = [];
+            // Broj komponenti 
+            var num = Math.floor(Math.random() * 10) + 1;
+            var total = num;
+            var hit = 0
+
+            function startGame() {
+                for (var i = 0; i<num; i++) {
+                    myGamePieces[i] = new component(i,30, 30);
+                }
+                myGameArea.start();
+            }
+
+            var myGameArea = {
+                canvas : document.createElement("canvas"),
+                start : function() {
+                    this.canvas.id = "myGameCanvas";
+                    this.canvas.width = 500;
+                    this.canvas.height = 500;
+                    this.context = this.canvas.getContext("2d");	
+                    document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+                    this.frameNo = 0;
+                    this.interval = setInterval(updateGameArea, 20);
+                    
+                    // Korisnik može kliknuti mišem na neku komponentu („pogađa komponentu“) nakon čega ona se više ne prikazuje.
+                    this.canvas.addEventListener('click', function(event) {
+                        var x = event.pageX - 8;
+                        var y = event.pageY - 8;
+
+                        for (rect of myGamePieces) {
+                            if ( x >= (rect.x - rect.width / 2) && x <= (rect.x + rect.width / 2)
+                            && y >= (rect.y - rect.height / 2) && y <= (rect.y + rect.height / 2)) {
+                                rect.clear();
+                                break;
+                            }
+                        }
+                    }, false);
+                },
+                stop : function() {
+                    clearInterval(this.interval);
+                },
+                clear : function() {
+                    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                }
+            }
+
+            // Komponente su kvadrati (rectangle). Sve komponente imaju iste dimenzije. 
+            // Svaka komponenta može imati različitu početnu brzinu i položaj
+            function component(id,width, height, type) {
+                this.id = id;
+                this.color = "#" + Math.floor(Math.random()*16777215).toString(16);
+                this.type = type;
+                this.width = width;
+                this.height = height;
+                // položaj, x i y brzine su slučajne brojčane vrijednosti (random)
+                this.speed_x = Math.floor(Math.random() * 7) + 1;
+                this.speed_y = Math.floor(Math.random() * 7) + 1;
+                this.x = Math.floor(Math.random() * 500);
+                this.y = Math.floor(Math.random() * 500);
+
+                this.update = function() {
+                    ctx = myGameArea.context;
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(this.width / -2, this.height / -2, this.width, this.height);
+                    ctx.restore();
+                }
+
+                this.clear = function() {
+                    ctx = myGameArea.context;
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    ctx.fillStyle = this.color;
+                    ctx.clearRect(this.width / -2, this.height / -2, this.width, this.height);
+                    ctx.restore();
+                    for (var i = 0; i < num; i++) {
+                        if (myGamePieces[i].id == this.id) {
+                            var spliced = myGamePieces.splice(i, 1);
+                            break;
+                        }
+                    }
+                    num--;
+                    hit++;
+                   
+                }
+
+                this.newPos = function() {
+                    let old_speed_x = this.speed_x;
+                    let old_speed_y = this.speed_y;
+
+                    // Komponente se odbijaju od ruba Canvas objekta tako da nakon odbijanja brzina im se malo promijeni.
+
+                    if ((this.x - this.width / 2 < 0) || ((this.x + this.width / 2) >= myGameArea.context.canvas.width)) {
+                        if (this.x - this.width / 2 < 0) 
+                            this.speed_x = (old_speed_x > 0) ? old_speed_x : -old_speed_x;
+                        else if ((this.x + this.width / 2) >= myGameArea.context.canvas.width) 
+                            this.speed_x = (old_speed_x > 0) ? -old_speed_x : old_speed_x;
+
+                        while(1) {
+                            var rand = Math.floor(Math.random() * 3) - 1;
+                            if ( this.speed_x > 0  && (this.speed_x - rand) > 0 ) {
+                                this.speed_x -= rand;
+                                break;
+                            } else if ( this.speed_x < 0 && (this.speed_x + rand) < 0) {
+                                this.speed_x += rand;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if ((this.y - this.height / 2 < 0)  ||  ((this.y + this.height / 2) >= myGameArea.context.canvas.height)) {
+                        if (this.y - this.height / 2 < 0) 
+                            this.speed_y = (old_speed_y > 0) ? -old_speed_y : old_speed_y;
+                        else if ((this.y + this.height / 2) >= myGameArea.context.canvas.height) 
+                            this.speed_y = (old_speed_y > 0) ? old_speed_y : -old_speed_y;
+
+                        while(1) {
+                            var rand = Math.floor(Math.random() * 3) - 1;
+                            if ( this.speed_y > 0  && (this.speed_y - rand) > 0) {
+                                this.speed_y -= rand;
+                                break;
+                            } else if ( this.speed_y < 0 && (this.speed_y + rand) < 0) {
+                                this.speed_y += rand;
+                                break;
+                            }
+                        }
+                    }
+                    
+            
+                    this.x += this.speed_x;
+                    this.y -= this.speed_y;
+                }
+            }
+
+            function updateGameArea() {
+                myGameArea.clear();
+
+                // Uz gornji desni rub Canvas objekta napisan je broj generiranih komponenti
+                // Unutar Canvas objekta uz broj generiranih komponenti napisan je broj „pogođenih“ komponenti.
+                var can = document.getElementById("myGameCanvas");
+                var ctx = can.getContext("2d");
+                ctx.font = "20px Georgia";
+                var txt = "SCORE: " + hit + " / " + total;
+                ctx.fillText(txt, (500 - 8 - ctx.measureText(txt).width), 20);
+
+                if (hit == total) {
+                    ctx.font = "40px Georgia";
+                    ctx.fillStyle = "green";
+                    var txt1 = "GAME OVER";
+                    ctx.fillText(txt1, (500/2 - ctx.measureText(txt1).width/2), 500/2);
+                    ctx.font = "20px Georgia";
+                    var txt2 = "YOU WIN";
+                    ctx.fillText(txt2, (500/2 - ctx.measureText(txt2).width/2), (500/2 + 40));
+                }
+
+                for (piece of myGamePieces) {
+                    piece.newPos();
+                    piece.update();
+                }
+            }
+
+        </script>
+    </head>
+    <body onload="startGame()">
+        <h1>BOMBICE</h1>
+    </body>
+</html>
